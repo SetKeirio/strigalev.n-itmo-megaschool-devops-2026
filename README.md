@@ -9,6 +9,7 @@
 sudo visudo
 
 И там в группе admins добавим строчку:
+
 %admins ALL=(ALL) NOPASSWD: ALL
 
 Установим докер (последнюю версию):
@@ -18,30 +19,45 @@ sudo visudo
 22.04 — «Jammy».
 
 sudo apt update
+
 sudo apt install curl software-properties-common ca-certificates apt-transport-https -y
+
 wget -O- https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor | sudo tee /etc/apt/keyrings/docker.gpg > /dev/null
+
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble (тут версия убунту) stable"| sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
 sudo apt update
+
 apt-cache policy docker-ce
+
 sudo apt install docker-ce -y
+
 sudo systemctl status docker
+
 ![Alt text](/docker_up.png?raw=true "Optional Title")
 
 
 Далее надо сгенерировать ssh-ключ:
+
 ssh-keygen
 
 После чего выполнить следующие команды для пользователя admin1, аналогично можно и для developer1:
+
 sudo mkdir -p /home/admin1/.ssh
+
 echo "ssh-rsa key" (тут ключ) | sudo tee /home/admin1/.ssh/authorized_keys
+
 sudo chown -R admin1:admins /home/admin1/.ssh
+
 sudo chmod 700 /home/admin1/.ssh
+
 sudo chmod 600 /home/admin1/.ssh/authorized_keys
 
 Добавим пользователей в группу docker:
-sudo usermod -aG docker admins
-sudo usermod -aG docker devlopers
-sudo useradd -m -s /bin/bash -g admins -G docker admin1
+
+sudo usermod -aG docker admins  
+sudo usermod -aG docker devlopers  
+sudo useradd -m -s /bin/bash -g admins -G docker admin1  
 sudo useradd -m -s /bin/bash -g developers -G docker developer1
 
 И поставим автостарт докера:
@@ -115,43 +131,66 @@ scrape_configs:
     static_configs:
       - targets: ['cadvisor:8080']
 
-   Добавляем датасорсы:
-
-   Configuration - Data Sources - Add data source
+Добавляем датасорсы:  
+Configuration - Data Sources - Add data source
 
 Choose Prometheus
-URL: http://prometheus:9090
-Save & targetsImport dsashboard
-DashboardS - Import
-ID: 1860 (Node Exporter Full) - Load
-Prometheus - targetsImport
-Repeat for ID: 893 (Docker Monitoring)
+
+URL: http://prometheus:9090  
+Save & targetsImport dsashboard  
+DashboardS - Import  
+ID: 1860 (Node Exporter Full) - Load  
+Prometheus - targetsImport  
+Repeat for ID: 893 (Docker Monitoring)  
 
 Запускаем nexus:
+
 docker compose -f docker-compose-nexus.yml up -d
 
 Находим пароль для nexus в файле контейнера:
-docker exec nexus
+
+docker exec nexus  
 cat /nexus-data/admin.password
 
-Логинимся, после чего создаем репозиторий с такими настройками:
-HTTP: Port: 8082
-Remote storage: https://registry-1.docker.io
-Allow anonymous docker pull
-Press Create repository
+Логинимся на http://localhost:8081, после чего создаем репозиторий с такими настройками:
+
+HTTP: Port: 8082  
+Remote storage: https://registry-1.docker.io  
+Allow anonymous docker pull  
+Press Create repository  
+![Alt text](/docker_proxy_repository.png?raw=true "docker proxy repository")
 
 Перед этим говорим, чтобы докер доверял локальному нексусу:
-sudo nano /etc/docker/daemon.json
-{
-"insecure-registries": ["localhost:8082"],
-"registry-mirrors": ["http://localhost:8082"]
-}
+
+sudo nano /etc/docker/daemon.json  
+{  
+"insecure-registries": ["localhost:8082"],  
+"registry-mirrors": ["http://localhost:8082"]  
+}  
 
 Запускаем мониторинг:
-docker compose -f docker-compose-monitoring.yml down
-docker compose -f docker-compose-monitoring.yml up -d
 
-Заходим в grafana, выбираем data source:
+docker compose -f docker-compose-monitoring.yml down  
+docker compose -f docker-compose-monitoring.yml up -d  
+
+Заходим в grafana http://localhost:3000, выбираем data source, проверяем, что установили контакт:
+
+Choose Prometheus  
+URL: http://prometheus:9090  
+![Alt text](/grafana_datasource_setting.png?raw=true "datasource prometheus setting")  
+
+Далее заходим в дешборды, импортируем дашборд с id 893 (это для docker monitoring):
+
+![Alt text](/grafana_prometheus_dashboard_docker.png?raw=true "prometheus docker dashboard")
+
+Видим, что есть те образы, что мы запустили, есть трафик сети для каждого контейнера, есть количество контейнеров, использование памяти и процессорного времени для каждого контейнера
+
+И еще экспортируем дешборд с id 1860 (это для full exporter):
+![Alt text](/grafana_full_exporter_dashboard.png?raw=true "full exporter dashboard")
+
+Увидим, что появился еще и какой-то график с временными отметками метрик:
+![Alt text](/graphana_graph.png?raw=true "one random graph")
+
 
 
 
