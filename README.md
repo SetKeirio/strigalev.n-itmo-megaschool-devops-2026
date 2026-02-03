@@ -25,7 +25,7 @@ sudo apt update
 apt-cache policy docker-ce
 sudo apt install docker-ce -y
 sudo systemctl status docker
-![Alt text](docker up.png?raw=true "Docker up")
+![Alt text](/docker_up.png?raw=true "Optional Title")
 
 
 Далее надо сгенерировать ssh-ключ:
