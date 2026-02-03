@@ -1,9 +1,11 @@
 # strigalev.n-itmo-megaschool-devops-2026
 
 Добавим пользователей:
-    sudo groupadd developers
-    sudo groupmod developers -g 1001
-    sudo groupadd admins -g 1002
+
+    sudo groupadd developers  
+    sudo groupmod developers -g 1001  
+    sudo groupadd admins -g 1002  
+    
 Добавим им автоматическое выполнение:
 
 sudo visudo
@@ -137,11 +139,7 @@ Configuration - Data Sources - Add data source
 Choose Prometheus
 
 URL: http://prometheus:9090  
-Save & targetsImport dsashboard  
-DashboardS - Import  
-ID: 1860 (Node Exporter Full) - Load  
-Prometheus - targetsImport  
-Repeat for ID: 893 (Docker Monitoring)  
+Save & target (чтобы проверить api)
 
 Запускаем nexus:
 
