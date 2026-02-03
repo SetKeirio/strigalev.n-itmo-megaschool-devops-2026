@@ -38,6 +38,96 @@ sudo chown -R admin1:admins /home/admin1/.ssh
 sudo chmod 700 /home/admin1/.ssh
 sudo chmod 600 /home/admin1/.ssh/authorized_keys
 
-Добавим пользователей:
+Добавим пользователей в группу docker:
+sudo usermod -aG docker admins
+sudo usermod -aG docker devlopers
 sudo useradd -m -s /bin/bash -g admins -G docker admin1
 sudo useradd -m -s /bin/bash -g developers -G docker developer1
+
+И поставим автостарт докера:
+
+sudo systemctl enable docker
+
+Далее поставим nexus:
+docker-compose-nexus.yml
+services:
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+    volumes:
+      - nexus-data:/nexus-data
+
+volumes:
+  nexus-data:
+  
+И сам мониторинг:
+
+cat docker-compose-monitoring.yml
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports: ["3000:3000"]
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports: ["9100:9100"]
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports: ["8080:8080"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    privileged: true
+
+cat prometheus.yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node_exporter:9100']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+   Добавляем датасорсы:
+
+   Configuration - Data Sources - Add data source
+
+Choose Prometheus
+URL: http://prometheus:9090
+Save & targetsImport dsashboard
+DashboardS - Import
+ID: 1860 (Node Exporter Full) - Load
+Prometheus - targetsImport
+Repeat for ID: 893 (Docker Monitoring)
+
+docker-compose -f docker-compose-monitoring.yml down
+docker-compose -f docker-compose-monitoring.yml up -d
+
+
