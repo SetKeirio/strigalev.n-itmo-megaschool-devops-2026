@@ -127,7 +127,32 @@ ID: 1860 (Node Exporter Full) - Load
 Prometheus - targetsImport
 Repeat for ID: 893 (Docker Monitoring)
 
-docker-compose -f docker-compose-monitoring.yml down
-docker-compose -f docker-compose-monitoring.yml up -d
+Запускаем nexus:
+docker compose -f docker-compose-nexus.yml up -d
+
+Находим пароль для nexus в файле контейнера:
+docker exec nexus
+cat /nexus-data/admin.password
+
+Логинимся, после чего создаем репозиторий с такими настройками:
+HTTP: Port: 8082
+Remote storage: https://registry-1.docker.io
+Allow anonymous docker pull
+Press Create repository
+
+Перед этим говорим, чтобы докер доверял локальному нексусу:
+sudo nano /etc/docker/daemon.json
+{
+"insecure-registries": ["localhost:8082"],
+"registry-mirrors": ["http://localhost:8082"]
+}
+
+Запускаем мониторинг:
+docker compose -f docker-compose-monitoring.yml down
+docker compose -f docker-compose-monitoring.yml up -d
+
+Заходим в grafana, выбираем data source:
+
+
 
 
